@@ -8,49 +8,66 @@ interface GasResponse {
 }
 
 export const postQuizResult = async (data: QuizResultPayload): Promise<boolean> => {
-  if (GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
-    console.warn("API URL not configured. Mocking success.");
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return true;
-  }
-
   try {
-    // Note: We use 'text/plain' for Content-Type to avoid triggering a CORS preflight 
-    // OPTIONS request, which Google Apps Script Web Apps do not natively support.
-    // The backend parses the body as JSON regardless.
+    // IMPORTANT: method: 'POST', body: JSON string
+    // 'redirect: follow' is CRITICAL for GAS Web Apps
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
+      redirect: 'follow', 
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
+        'Content-Type': 'text/plain;charset=utf-8', // avoiding CORS preflight
       },
       body: JSON.stringify(data),
     });
 
-    const resData: GasResponse = await response.json();
-    return resData.status === 'success';
+    const text = await response.text();
+    
+    // Safety check for HTML responses (Permission errors)
+    if (text.trim().startsWith('<')) {
+      console.error("Server returned HTML. Check permissions.", text);
+      return false;
+    }
+
+    try {
+      const resData: GasResponse = JSON.parse(text);
+      return resData.status === 'success';
+    } catch (e) {
+      console.error("Failed to parse response:", text);
+      return false;
+    }
+
   } catch (error) {
-    console.error("Failed to post results:", error);
+    console.error("Network error during POST:", error);
     return false;
   }
 };
 
 export const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-  if (GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
-    console.warn("API URL not configured. Returning empty list (No Dummy Data allowed).");
-    return [];
-  }
-
   try {
-    // FIX: Add a unique timestamp query param to prevent browser caching of the GET request
     const separator = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
     const cacheBuster = `v=${new Date().getTime()}`;
     const url = `${GOOGLE_SCRIPT_URL}${separator}${cacheBuster}`;
 
-    const response = await fetch(url);
-    const resData: GasResponse = await response.json();
+    // IMPORTANT: redirect: 'follow' ensures we follow the Google 302 redirect to the data
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow'
+    });
     
-    // Check for nested data object from our GAS response format
+    const text = await response.text();
+
+    if (text.trim().startsWith('<')) {
+      console.error("Leaderboard fetch returned HTML.", text);
+      throw new Error("Server Permission Error");
+    }
+
+    let resData: GasResponse;
+    try {
+      resData = JSON.parse(text);
+    } catch (e) {
+      throw new Error("Invalid JSON response");
+    }
+    
     if (resData.status === 'success' && Array.isArray(resData.data)) {
         return resData.data;
     }

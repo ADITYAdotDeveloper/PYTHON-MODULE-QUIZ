@@ -1,7 +1,7 @@
 import { Question, Quote } from './types';
 
 // Replace this with your deployed Google Apps Script Web App URL
-export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8C0pyho8NkCEkpJpVbZ0CNKZ9cIbTXUx8CzTkUCLErtTELnAk7ZqIFbfvMoArfYaE/exec';
+export const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby29WxWm5EGKpZtyjjEizWtB-jPgbG2XvNRRrLn4FPCcgoEAIkeYr8YRpo62yIkZhmp/exec';
 
 export const MOTIVATIONAL_QUOTES: Quote[] = [
   { quote: "Dream bigger. Do bigger.", author: "Unknown" },

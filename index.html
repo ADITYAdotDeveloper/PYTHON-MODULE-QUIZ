@@ -113,6 +113,7 @@
 
         // --- CONSTANTS ---
         // IMPORTANT: Replace this URL with your actual Google Apps Script Deployment URL
+        // It should look like: https://script.google.com/macros/s/......./exec
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8C0pyho8NkCEkpJpVbZ0CNKZ9cIbTXUx8CzTkUCLErtTELnAk7ZqIFbfvMoArfYaE/exec';
 
         const MOTIVATIONAL_QUOTES = [
@@ -254,22 +255,32 @@
         // --- SERVICES ---
 
         const postQuizResult = async (data) => {
-            if (GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
-                console.warn("API URL not configured. Mocking success.");
-                await new Promise(resolve => setTimeout(resolve, 800));
-                return true;
-            }
-
             try {
+                // Ensure redirect: 'follow' is set for Google Apps Script
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
+                    redirect: 'follow', 
                     headers: {
                         'Content-Type': 'text/plain;charset=utf-8',
                     },
                     body: JSON.stringify(data),
                 });
-                const resData = await response.json();
-                return resData.status === 'success';
+                
+                // Read text first to handle errors gracefully
+                const text = await response.text();
+                
+                if (text.trim().startsWith('<')) {
+                    console.error("Server returned HTML (likely permission error). Check backend deployment.", text);
+                    return false;
+                }
+
+                try {
+                    const resData = JSON.parse(text);
+                    return resData.status === 'success';
+                } catch (e) {
+                    console.error("Server Response was not JSON:", text);
+                    return false;
+                }
             } catch (error) {
                 console.error("Failed to post results:", error);
                 return false;
@@ -277,18 +288,31 @@
         };
 
         const fetchLeaderboard = async () => {
-            if (GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
-                console.warn("API URL not configured. Returning empty list.");
-                return [];
-            }
-
             try {
                 const separator = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
                 const cacheBuster = `v=${new Date().getTime()}`;
                 const url = `${GOOGLE_SCRIPT_URL}${separator}${cacheBuster}`;
 
-                const response = await fetch(url);
-                const resData = await response.json();
+                // Ensure redirect: 'follow' is set for Google Apps Script
+                const response = await fetch(url, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+
+                const text = await response.text();
+                
+                if (text.trim().startsWith('<')) {
+                     console.error("Leaderboard fetch returned HTML. Check permissions.", text);
+                     throw new Error("Server Permission Error");
+                }
+
+                let resData;
+                try {
+                    resData = JSON.parse(text);
+                } catch (e) {
+                    console.error("Leaderboard fetch failed. Invalid JSON:", text);
+                    throw new Error("Invalid server response.");
+                }
                 
                 if (resData.status === 'success' && Array.isArray(resData.data)) {
                     return resData.data;
@@ -517,6 +541,7 @@
             }, [currentScreen, motivationalQuote, userName, score]);
 
             const loadLeaderboard = useCallback(async () => {
+                setLeaderboard([]); // CLEAR LIST IMMEDIATELY
                 setIsLoadingLeaderboard(true);
                 setLeaderboardError(null);
                 try {
@@ -751,7 +776,18 @@
                 <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4 shrink-0 gap-4">
                     <div>
                     <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Leaderboard</h2>
-                    <p className="text-[10px] md:text-sm text-slate-500 uppercase tracking-widest mt-0.5">Top Performers</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-[10px] md:text-sm text-slate-500 uppercase tracking-widest mt-0.5">Top Performers</p>
+                        <button 
+                            onClick={loadLeaderboard} 
+                            className={`p-1 rounded-full hover:bg-slate-800 transition-colors ${leaderboardError ? 'text-red-400' : 'text-slate-500 hover:text-white'}`}
+                            title="Refresh Leaderboard"
+                        >
+                            <svg className={`w-4 h-4 ${isLoadingLeaderboard ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                    </div>
                     </div>
                     <div className="w-auto min-w-[110px] md:min-w-[140px]">
                     <Button variant="sleekSecondary" fullWidth onClick={goHome}>
@@ -768,58 +804,75 @@
                     </div>
 
                     <div className="overflow-y-auto flex-1 p-2 md:p-3 space-y-2 custom-scrollbar">
-                    {isLoadingLeaderboard ? (
+                    {isLoadingLeaderboard && leaderboard.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                         <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                         </div>
                     ) : leaderboardError ? (
-                        <div className="text-center py-10 text-sm text-red-400">{leaderboardError}</div>
+                        <div className="text-center py-10 text-sm text-red-400 px-4">
+                            {leaderboardError}
+                        </div>
                     ) : leaderboard.length === 0 ? (
                         <div className="text-center py-20 text-base text-slate-600 font-light">Repository empty. Be the pioneer.</div>
                     ) : (
                         leaderboard.map((entry, index) => {
                         const rank = index + 1;
                         let rowStyle = "hover:bg-white/5 border border-transparent";
-                        let rankStyle = "text-slate-400";
+                        let rankContent = <span className="text-slate-500">{String(rank).padStart(2, '0')}</span>;
+                        let textStyle = "text-slate-400";
                         let scoreStyle = "text-slate-500";
+                        let glowEffect = "";
                         
+                        // Top 1: Gold
                         if (rank === 1) {
-                            rowStyle = "bg-gradient-to-r from-yellow-900/10 to-transparent border border-yellow-500/30 shadow-[inset_0_0_20px_rgba(234,179,8,0.05)]";
-                            rankStyle = "text-yellow-400 font-bold scale-110";
-                            scoreStyle = "text-yellow-400";
-                        } else if (rank === 2) {
-                            rowStyle = "bg-gradient-to-r from-slate-700/10 to-transparent border border-slate-400/30";
-                            rankStyle = "text-slate-300 font-bold scale-110";
-                            scoreStyle = "text-slate-300";
-                        } else if (rank === 3) {
-                            rowStyle = "bg-gradient-to-r from-orange-900/10 to-transparent border border-orange-700/30";
-                            rankStyle = "text-orange-400 font-bold scale-110";
-                            scoreStyle = "text-orange-400";
-                        } else if (rank <= 10) {
-                            rowStyle = "bg-blue-900/5 border border-blue-500/10";
-                            rankStyle = "text-blue-300 font-medium";
+                            rowStyle = "bg-gradient-to-r from-yellow-500/20 to-yellow-900/5 border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.1)]";
+                            rankContent = <span className="text-2xl">🏆</span>;
+                            textStyle = "text-yellow-100 font-bold";
+                            scoreStyle = "text-yellow-400 text-lg";
+                            glowEffect = "shadow-yellow-500/10";
+                        } 
+                        // Top 2: Silver
+                        else if (rank === 2) {
+                            rowStyle = "bg-gradient-to-r from-slate-300/20 to-slate-700/5 border border-slate-300/30";
+                            rankContent = <span className="text-xl">🥈</span>;
+                            textStyle = "text-slate-100 font-bold";
+                            scoreStyle = "text-slate-300 text-lg";
+                        } 
+                        // Top 3: Bronze
+                        else if (rank === 3) {
+                            rowStyle = "bg-gradient-to-r from-orange-400/20 to-orange-900/5 border border-orange-400/30";
+                            rankContent = <span className="text-xl">🥉</span>;
+                            textStyle = "text-orange-100 font-bold";
+                            scoreStyle = "text-orange-400 text-lg";
+                        } 
+                        // Top 10: Elite
+                        else if (rank <= 10) {
+                            rowStyle = "bg-blue-900/10 border border-blue-500/10 backdrop-blur-sm";
+                            rankContent = <span className="text-blue-400 font-bold">{String(rank).padStart(2, '0')}</span>;
+                            textStyle = "text-blue-100";
                             scoreStyle = "text-blue-300";
                         }
 
-                        if (entry.name === userName && currentScreen === 'LEADERBOARD') {
-                            rowStyle = "bg-purple-600/20 border border-purple-500/50 shadow-[0_0_15px_rgba(124,58,237,0.1)]";
+                        // User Highlight (Override border/bg slightly to indicate self)
+                        if (entry.name === userName) {
+                             rowStyle += " ring-1 ring-purple-500 bg-purple-900/20";
                         }
 
                         return (
                             <div 
                             key={`${entry.name}-${entry.timestamp}-${index}`}
-                            className={`grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-4 rounded-xl items-center transition-all duration-300 ${rowStyle}`}
+                            className={`grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-4 rounded-xl items-center transition-all duration-300 group ${rowStyle} ${glowEffect}`}
                             >
-                            <div className={`col-span-2 text-center font-mono text-xs md:text-base ${rankStyle}`}>
-                                {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank).padStart(2, '0')}
+                            <div className="col-span-2 text-center flex justify-center items-center">
+                                {rankContent}
                             </div>
-                            <div className="col-span-6 font-medium text-slate-200 truncate pr-2 text-xs md:text-base">
+                            <div className={`col-span-6 truncate pr-2 text-xs md:text-base ${textStyle}`}>
                                 {entry.name}
+                                {entry.name === userName && <span className="ml-2 text-[10px] bg-purple-500 px-1.5 py-0.5 rounded text-white font-bold tracking-wider uppercase">You</span>}
                             </div>
-                            <div className="col-span-4 text-right font-bold text-xs md:text-base">
+                            <div className="col-span-4 text-right font-bold text-xs md:text-base flex items-center justify-end gap-1">
                                 <span className={scoreStyle}>{entry.score}</span>
-                                <span className="text-slate-700 mx-1 text-[10px]">/</span>
-                                <span className="text-slate-700 text-[10px]">10</span>
+                                <span className="text-slate-700 text-[10px]">/ 10</span>
                             </div>
                             </div>
                         );

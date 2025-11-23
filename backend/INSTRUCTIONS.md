@@ -17,13 +17,13 @@ Follow these steps to deploy the backend for the Python Modules Quiz.
 3. Copy the contents of `backend/Code.js` from this project and paste it into the script editor.
 4. (Optional) Run the `setupSheet` function once to ensure headers are clean, though you can do this manually.
 
-## 3. Deploy as Web App
+## 3. Deploy as Web App (CRITICAL STEP)
 1. Click the blue **Deploy** button > **New deployment**.
 2. Click the "Select type" gear icon > **Web app**.
 3. Configure the following:
-   - **Description**: Quiz Backend
+   - **Description**: Quiz Backend v2
    - **Execute as**: **Me** (your email)
-   - **Who has access**: **Anyone**
+   - **Who has access**: **Anyone** (IMPORTANT - otherwise fetch fails).
 4. Click **Deploy**.
 5. Authorize the script when prompted (you may need to click "Advanced" > "Go to... (unsafe)").
 

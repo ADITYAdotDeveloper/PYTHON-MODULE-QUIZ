@@ -119,6 +119,7 @@ const App: React.FC = () => {
 
   // --- Logic: Leaderboard ---
   const loadLeaderboard = useCallback(async () => {
+    setLeaderboard([]); // CLEAR EXISTING DATA IMMEDIATELY
     setIsLoadingLeaderboard(true);
     setLeaderboardError(null);
     try {
@@ -128,12 +129,9 @@ const App: React.FC = () => {
         if (b.score !== a.score) return b.score - a.score;
         
         // Secondary: Timestamp Ascending (Older is better)
-        // If 'b' came later (larger timestamp), 'b' should be lower in rank.
-        // Therefore, we subtract B from A? No, wait:
-        // A (10:00) vs B (11:00). A < B. 
-        // We want A to be index 0, B to be index 1.
-        // Ascending sort: a - b. (Negative result puts a first).
-        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+        const timeA = new Date(a.timestamp).getTime() || 0;
+        const timeB = new Date(b.timestamp).getTime() || 0;
+        return timeA - timeB;
       });
       setLeaderboard(data);
     } catch (err) {
@@ -261,7 +259,6 @@ const App: React.FC = () => {
                   variantStyle = "opacity-40 grayscale";
                 }
               } else if (isSelected) {
-                // Fixed: Removed scale to prevent overflow. Using shadow/border color instead.
                 variantStyle = "bg-purple-600/20 border-purple-500 text-white shadow-[0_0_15px_rgba(124,58,237,0.2)]";
               }
 
@@ -279,7 +276,6 @@ const App: React.FC = () => {
                   }`}>
                     {optionKey}
                   </span>
-                  {/* Fixed: Added break-words, whitespace-normal, min-w-0 to prevent overflow */}
                   <span className="text-sm md:text-lg leading-snug pt-0.5 flex-1 break-words whitespace-normal min-w-0">{currentQ.options[optionKey]}</span>
                 </button>
               );
@@ -363,7 +359,18 @@ const App: React.FC = () => {
       <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4 shrink-0 gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Leaderboard</h2>
-          <p className="text-[10px] md:text-sm text-slate-500 uppercase tracking-widest mt-0.5">Top Performers</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] md:text-sm text-slate-500 uppercase tracking-widest mt-0.5">Top Performers</p>
+            <button 
+                onClick={loadLeaderboard} 
+                className={`p-1 rounded-full hover:bg-slate-800 transition-colors ${leaderboardError ? 'text-red-400' : 'text-slate-500 hover:text-white'}`}
+                title="Refresh Leaderboard"
+            >
+                <svg className={`w-4 h-4 ${isLoadingLeaderboard ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+          </div>
         </div>
         <div className="w-auto min-w-[110px] md:min-w-[140px]">
           <Button variant="sleekSecondary" fullWidth onClick={goHome}>
@@ -380,12 +387,12 @@ const App: React.FC = () => {
         </div>
 
         <div className="overflow-y-auto flex-1 p-2 md:p-3 space-y-2 custom-scrollbar">
-          {isLoadingLeaderboard ? (
+          {isLoadingLeaderboard && leaderboard.length === 0 ? (
              <div className="flex items-center justify-center h-full">
                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
              </div>
           ) : leaderboardError ? (
-             <div className="text-center py-10 text-sm text-red-400">{leaderboardError}</div>
+             <div className="text-center py-10 text-sm text-red-400 px-4">{leaderboardError}</div>
           ) : leaderboard.length === 0 ? (
              <div className="text-center py-20 text-base text-slate-600 font-light">Repository empty. Be the pioneer.</div>
           ) : (
@@ -394,20 +401,24 @@ const App: React.FC = () => {
               let rowStyle = "hover:bg-white/5 border border-transparent";
               let rankStyle = "text-slate-400";
               let scoreStyle = "text-slate-500";
+              let rankContent = <span className={rankStyle}>{String(rank).padStart(2, '0')}</span>;
               
               // Top 3 Specific Styles
               if (rank === 1) {
                 rowStyle = "bg-gradient-to-r from-yellow-900/10 to-transparent border border-yellow-500/30 shadow-[inset_0_0_20px_rgba(234,179,8,0.05)]";
                 rankStyle = "text-yellow-400 font-bold scale-110";
                 scoreStyle = "text-yellow-400";
+                rankContent = <span className="text-xl md:text-2xl">🏆</span>;
               } else if (rank === 2) {
                 rowStyle = "bg-gradient-to-r from-slate-700/10 to-transparent border border-slate-400/30";
                 rankStyle = "text-slate-300 font-bold scale-110";
                 scoreStyle = "text-slate-300";
+                rankContent = <span className="text-lg md:text-xl">🥈</span>;
               } else if (rank === 3) {
                 rowStyle = "bg-gradient-to-r from-orange-900/10 to-transparent border border-orange-700/30";
                 rankStyle = "text-orange-400 font-bold scale-110";
                 scoreStyle = "text-orange-400";
+                rankContent = <span className="text-lg md:text-xl">🥉</span>;
               } else if (rank <= 10) {
                  rowStyle = "bg-blue-900/5 border border-blue-500/10";
                  rankStyle = "text-blue-300 font-medium";
@@ -424,11 +435,12 @@ const App: React.FC = () => {
                   key={`${entry.name}-${entry.timestamp}-${index}`}
                   className={`grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-4 rounded-xl items-center transition-all duration-300 ${rowStyle}`}
                 >
-                  <div className={`col-span-2 text-center font-mono text-xs md:text-base ${rankStyle}`}>
-                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank).padStart(2, '0')}
+                  <div className={`col-span-2 text-center flex items-center justify-center font-mono text-xs md:text-base ${rankStyle}`}>
+                    {rankContent}
                   </div>
                   <div className="col-span-6 font-medium text-slate-200 truncate pr-2 text-xs md:text-base">
                     {entry.name}
+                    {entry.name === userName && <span className="ml-2 text-[10px] bg-purple-500 px-1.5 py-0.5 rounded text-white font-bold tracking-wider uppercase">You</span>}
                   </div>
                   <div className="col-span-4 text-right font-bold text-xs md:text-base">
                     <span className={scoreStyle}>{entry.score}</span>

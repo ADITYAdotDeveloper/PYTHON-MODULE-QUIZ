@@ -1,27 +1,20 @@
 /**
  * Google Apps Script Backend for Python Modules Quiz
  * 
- * INSTRUCTIONS:
- * 1. Paste this code into your Google Apps Script editor (Extensions > Apps Script).
- * 2. Save.
- * 3. Click Deploy > New Deployment.
- * 4. Select Type: Web App.
- * 5. Execute as: "Me".
- * 6. Who has access: "Anyone".
- * 7. Click Deploy and use the resulting URL in your frontend constants.ts.
+ * IMPORTANT: After pasting this, you MUST click "Deploy" > "New Deployment".
  */
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  // Wait shorter time for lock to avoid freezing UI if backend is busy
   try {
+    // Wait for up to 10 seconds for other requests to finish
     lock.waitLock(10000); 
   } catch (e) {
-    return createResponse({ status: "error", message: "Server is busy" });
+    return createResponse({ status: "error", message: "Server busy, please try again." });
   }
 
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet = getOrCreateSheet();
     
     // Parse the POST body
     var postContent = e.postData.contents;
@@ -30,21 +23,27 @@ function doPost(e) {
     try {
       data = JSON.parse(postContent);
     } catch (parseErr) {
-      return createResponse({ status: "error", message: "Invalid JSON format" });
+      return createResponse({ status: "error", message: "Invalid JSON format." });
     }
     
-    // Validate required fields
-    if (!data.name || data.score === undefined || !data.timestamp || !data.quote) {
-       return createResponse({ status: "error", message: "Missing required fields" });
+    // Basic validation
+    if (!data.name || data.score === undefined || !data.timestamp) {
+       return createResponse({ status: "error", message: "Missing required fields (name, score, timestamp)." });
     }
 
-    // Append row: timestamp, name, score, quote
-    sheet.appendRow([data.timestamp, data.name, data.score, data.quote]);
+    // Append the row safely
+    // We treat everything as strings/numbers to ensure they stick in the sheet correctly
+    sheet.appendRow([
+      data.timestamp, 
+      data.name, 
+      Number(data.score), 
+      data.quote || ""
+    ]);
 
-    return createResponse({ status: "success", message: "Row added" });
+    return createResponse({ status: "success", message: "Score saved successfully." });
 
   } catch (err) {
-    return createResponse({ status: "error", message: err.toString() });
+    return createResponse({ status: "error", message: "Server Error: " + err.toString() });
   } finally {
     lock.releaseLock();
   }
@@ -52,29 +51,32 @@ function doPost(e) {
 
 function doGet(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet = getOrCreateSheet();
     var rows = sheet.getDataRange().getValues();
     var data = [];
 
-    // Assuming Row 1 is header, start loop from Row 2 (index 1)
+    // Row 0 is the header (timestamp, name, score, quote)
+    // Start loop from Row 1
     for (var i = 1; i < rows.length; i++) {
       var row = rows[i];
       
-      // Safety check: ensure the row has at least a timestamp and a name
+      // Only add if we have at least a timestamp and a name
       if (row[0] && row[1]) {
-        var timestamp = row[0];
-        
-        // Fix: Explicitly convert Date objects to ISO Strings
-        // Google Sheets returns Date objects for date cells, which allows correct sorting later
-        if (timestamp instanceof Date) {
-          timestamp = timestamp.toISOString();
+        var timestampRaw = row[0];
+        var timestampStr = "";
+
+        // Robust Date to String conversion
+        if (Object.prototype.toString.call(timestampRaw) === '[object Date]') {
+           timestampStr = timestampRaw.toISOString();
+        } else {
+           timestampStr = String(timestampRaw);
         }
 
         data.push({
-          timestamp: timestamp,
-          name: row[1],
-          score: Number(row[2]), // Ensure score is a number
-          quote: row[3]
+          timestamp: timestampStr,
+          name: String(row[1]),
+          score: Number(row[2]),
+          quote: String(row[3] || "")
         });
       }
     }
@@ -82,23 +84,23 @@ function doGet(e) {
     return createResponse({ status: "success", data: data });
 
   } catch (err) {
-    return createResponse({ status: "error", message: err.toString() });
+    return createResponse({ status: "error", message: "Fetch Error: " + err.toString() });
   }
 }
 
-/**
- * Helper to return JSON response with correct mime type and headers
- */
-function createResponse(payload) {
-  return ContentService.createTextOutput(JSON.stringify(payload))
-    .setMimeType(ContentService.MimeType.JSON);
+function getOrCreateSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  
+  // Initialize headers if empty
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["timestamp", "name", "score", "quote"]);
+  }
+  return sheet;
 }
 
-/**
- * Run this function once to initialize the sheet headers manually if needed
- */
-function setupSheet() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  sheet.clear();
-  sheet.appendRow(["timestamp", "name", "score", "quote"]);
+function createResponse(payload) {
+  // Return standard JSON response
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
 }
