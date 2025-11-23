@@ -1,0 +1,5 @@
+{
+  "name": "Python Modules Quiz",
+  "description": "A dynamic single-page quiz app for testing knowledge on Python modules and packages, featuring a leaderboard and motivational rewards.",
+  "requestFramePermissions": []
+}
