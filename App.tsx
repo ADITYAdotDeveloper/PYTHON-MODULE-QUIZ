@@ -425,4 +425,33 @@ const App: React.FC = () => {
                   className={`grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-4 rounded-xl items-center transition-all duration-300 ${rowStyle}`}
                 >
                   <div className={`col-span-2 text-center font-mono text-xs md:text-base ${rankStyle}`}>
-                    {rank === 1 ? '🥇' : rank === 
+                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank).padStart(2, '0')}
+                  </div>
+                  <div className="col-span-6 font-medium text-slate-200 truncate pr-2 text-xs md:text-base">
+                    {entry.name}
+                  </div>
+                  <div className="col-span-4 text-right font-bold text-xs md:text-base">
+                    <span className={scoreStyle}>{entry.score}</span>
+                    <span className="text-slate-700 mx-1 text-[10px]">/</span>
+                    <span className="text-slate-700 text-[10px]">10</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Layout>
+      {currentScreen === 'WELCOME' && renderWelcome()}
+      {currentScreen === 'QUIZ' && renderQuiz()}
+      {currentScreen === 'RESULTS' && renderResults()}
+      {currentScreen === 'LEADERBOARD' && renderLeaderboard()}
+    </Layout>
+  );
+};
+
+export default App;

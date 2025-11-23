@@ -1,13 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Python Modules & Packages Quiz</title>
+    
+    <!-- React & ReactDOM (UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Config -->
     <script>
       tailwind.config = {
         theme: {
@@ -17,10 +30,10 @@
             },
             colors: {
               brand: {
-                dark: '#0f172a', // Slate 900
-                purple: '#7c3aed', // Violet 600
-                blue: '#2563eb', // Blue 600
-                light: '#f8fafc', // Slate 50
+                dark: '#0f172a',
+                purple: '#7c3aed',
+                blue: '#2563eb',
+                light: '#f8fafc',
               }
             },
             keyframes: {
@@ -47,10 +60,14 @@
         }
       }
     </script>
+    
     <style>
       body {
         background-color: #000000;
         color: #ffffff;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevent body scroll, handle inside layout */
       }
       /* Custom scrollbar for leaderboard */
       ::-webkit-scrollbar {
@@ -73,18 +90,758 @@
         border: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       }
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 #0f172a;
+      }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
   }
 }
 </script>
 </head>
-  <body>
+<body>
     <div id="root"></div>
-  </body>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+
+        // --- CONSTANTS ---
+        // IMPORTANT: Replace this URL with your actual Google Apps Script Deployment URL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8C0pyho8NkCEkpJpVbZ0CNKZ9cIbTXUx8CzTkUCLErtTELnAk7ZqIFbfvMoArfYaE/exec';
+
+        const MOTIVATIONAL_QUOTES = [
+            { quote: "Dream bigger. Do bigger.", author: "Unknown" },
+            { quote: "Dream it. Wish it. Do it.", author: "Unknown" },
+            { quote: "Little things make big days.", author: "Unknown" },
+            { quote: "If you can dream it, you can do it.", author: "Walt Disney" },
+            { quote: "Don’t wait for opportunity. Create it.", author: "Unknown" },
+            { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+            { quote: "Your limitation—it’s only your imagination.", author: "Unknown" },
+            { quote: "Great things never come from comfort zones.", author: "Unknown" },
+            { quote: "Opportunities don’t happen. You create them.", author: "Chris Grosser" },
+            { quote: "The secret of getting ahead is getting started.", author: "Mark Twain" }
+        ];
+
+        const QUIZ_QUESTIONS = [
+            {
+                id: 1,
+                question: "What is a module in Python?",
+                options: {
+                    A: "A file that contains Python code such as functions or variables.",
+                    B: "A type of loop used to repeat code.",
+                    C: "A built-in function that runs automatically.",
+                    D: "A tool used only for creating user interfaces."
+                },
+                answer: "A",
+                explanation: "A module is a Python file (.py) that contains reusable code."
+            },
+            {
+                id: 2,
+                question: "Why are modules useful in Python?",
+                options: {
+                    A: "They make Python run faster.",
+                    B: "They allow code reuse and keep programs organized.",
+                    C: "They automatically fix errors.",
+                    D: "They replace variables in code."
+                },
+                answer: "B",
+                explanation: "Modules help reuse code and keep programs neat and organized."
+            },
+            {
+                id: 3,
+                question: "How do you import a module in Python?",
+                options: {
+                    A: "use module_name",
+                    B: "include module_name",
+                    C: "import module_name",
+                    D: "load module_name"
+                },
+                answer: "C",
+                explanation: "The correct keyword is “import”, such as: import module_name."
+            },
+            {
+                id: 4,
+                question: "What is a package in Python?",
+                options: {
+                    A: "A group of modules stored in a folder with __init__.py.",
+                    B: "A single Python variable.",
+                    C: "A temporary file created during execution.",
+                    D: "A file that only stores numbers."
+                },
+                answer: "A",
+                explanation: "A package is a folder containing multiple modules, usually with an __init__.py file."
+            },
+            {
+                id: 5,
+                question: "What is the main difference between a module and a package?",
+                options: {
+                    A: "A module is always faster.",
+                    B: "A module is a single file; a package is a folder of modules.",
+                    C: "A package only works on Windows.",
+                    D: "Modules cannot be imported."
+                },
+                answer: "B",
+                explanation: "A module is one .py file, while a package is a folder containing multiple modules."
+            },
+            {
+                id: 6,
+                question: "Which of the following is a built-in Python module?",
+                options: {
+                    A: "myscript",
+                    B: "math",
+                    C: "notes",
+                    D: "calculator"
+                },
+                answer: "B",
+                explanation: "“math” is a built-in module that comes with Python."
+            },
+            {
+                id: 7,
+                question: "What do we call a module that you create yourself?",
+                options: {
+                    A: "User-defined module",
+                    B: "Machine module",
+                    C: "Built-in module",
+                    D: "System module"
+                },
+                answer: "A",
+                explanation: "A user-defined module is one you create yourself in a .py file."
+            },
+            {
+                id: 8,
+                question: "If you have tools.py with a function greet(), how do you import only greet?",
+                options: {
+                    A: "from tools import greet",
+                    B: "import tools.greet()",
+                    C: "get tools.greet",
+                    D: "load greet from tools"
+                },
+                answer: "A",
+                explanation: "You import a single function using “from module import function”, e.g. from tools import greet."
+            },
+            {
+                id: 9,
+                question: "What is the difference between a user-defined and a built-in module?",
+                options: {
+                    A: "User-defined modules only work on Windows.",
+                    B: "User-defined modules are created by the programmer; built-in modules come with Python.",
+                    C: "Built-in modules cannot be imported.",
+                    D: "Built-in modules are always slower."
+                },
+                answer: "B",
+                explanation: "User-defined modules are written by the programmer; built-in modules are included with Python."
+            },
+            {
+                id: 10,
+                question: "Which of the following is a correct statement about Python modules?",
+                options: {
+                    A: "A module is a single Python file containing code.",
+                    B: "A module can only contain numbers.",
+                    C: "A module must be downloaded from the internet.",
+                    D: "A module cannot be imported."
+                },
+                answer: "A",
+                explanation: "A module is simply a .py file with code inside."
+            }
+        ];
+
+        // --- SERVICES ---
+
+        const postQuizResult = async (data) => {
+            if (GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
+                console.warn("API URL not configured. Mocking success.");
+                await new Promise(resolve => setTimeout(resolve, 800));
+                return true;
+            }
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(data),
+                });
+                const resData = await response.json();
+                return resData.status === 'success';
+            } catch (error) {
+                console.error("Failed to post results:", error);
+                return false;
+            }
+        };
+
+        const fetchLeaderboard = async () => {
+            if (GOOGLE_SCRIPT_URL.includes('YOUR_SCRIPT_ID_HERE')) {
+                console.warn("API URL not configured. Returning empty list.");
+                return [];
+            }
+
+            try {
+                const separator = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+                const cacheBuster = `v=${new Date().getTime()}`;
+                const url = `${GOOGLE_SCRIPT_URL}${separator}${cacheBuster}`;
+
+                const response = await fetch(url);
+                const resData = await response.json();
+                
+                if (resData.status === 'success' && Array.isArray(resData.data)) {
+                    return resData.data;
+                }
+                return [];
+            } catch (error) {
+                console.error("Failed to fetch leaderboard:", error);
+                throw error;
+            }
+        };
+
+        // --- COMPONENTS ---
+
+        // Button Component
+        const Button = ({ 
+            children, 
+            variant = 'primary', 
+            fullWidth = false,
+            className = '',
+            ...props 
+        }) => {
+            const baseStyles = "relative overflow-hidden transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed group";
+            
+            const getShapeStyles = () => {
+                switch (variant) {
+                case 'sleekPrimary':
+                case 'sleekSecondary':
+                    return "h-12 md:h-14 rounded-xl";
+                case 'option':
+                    return "rounded-xl";
+                default:
+                    return "py-3.5 px-8 rounded-xl";
+                }
+            };
+
+            const variants = {
+                primary: "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-xl shadow-purple-900/20 border border-white/10 bg-[length:200%_auto] animate-shimmer hover:shadow-purple-500/30 active:scale-[0.97]",
+                secondary: "bg-slate-900/50 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-600 hover:text-white backdrop-blur-sm active:scale-[0.97]",
+                option: "text-left bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-purple-500/50 text-slate-200 p-5 hover:shadow-lg hover:shadow-purple-900/10 active:scale-[0.99]",
+                submit: "bg-transparent border border-blue-500/50 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:bg-blue-500/10 active:scale-[0.97]",
+                sleekPrimary: "bg-transparent w-full",
+                sleekSecondary: "bg-transparent w-full"
+            };
+
+            const getVariantClasses = () => variants[variant] || variants.primary;
+
+            const renderSleekContent = (isSecondary) => (
+                <React.Fragment>
+                    <div className={`absolute inset-0 transition-opacity group-hover:opacity-100 ${isSecondary ? 'bg-slate-800/40 opacity-30' : 'bg-gradient-to-r from-blue-900/20 to-purple-900/20 opacity-50'}`}></div>
+                    <div className={`absolute inset-0 border rounded-xl transition-colors duration-500 ${isSecondary ? 'border-slate-600/30 group-hover:border-slate-400/50' : 'border-blue-500/30 group-hover:border-blue-400/60'}`}></div>
+                    {!isSecondary && (
+                        <div className="absolute top-0 left-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                    )}
+                    
+                    <div className="relative h-full flex items-center justify-between px-6">
+                        <span className={`font-bold tracking-[0.2em] text-[10px] md:text-sm uppercase transition-colors ${isSecondary ? 'text-slate-400 group-hover:text-white' : 'text-blue-100 group-hover:text-white'}`}>
+                        {children}
+                        </span>
+                        <div className={`flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-full border transition-all duration-300 group-hover:translate-x-1 ${
+                        isSecondary 
+                            ? 'bg-slate-700/30 border-slate-600 group-hover:bg-slate-600 group-hover:border-slate-400' 
+                            : 'bg-blue-500/10 border-blue-500/30 group-hover:bg-blue-500 group-hover:border-blue-400'
+                        }`}>
+                        <svg className={`w-3 h-3 md:w-4 md:h-4 transition-colors ${isSecondary ? 'text-slate-400 group-hover:text-white' : 'text-blue-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
+
+            return (
+                <button
+                className={`${baseStyles} ${getShapeStyles()} ${getVariantClasses()} ${fullWidth ? 'w-full' : ''} ${className}`}
+                {...props}
+                >
+                {(variant === 'sleekPrimary') ? (
+                    renderSleekContent(false)
+                ) : (variant === 'sleekSecondary') ? (
+                    renderSleekContent(true)
+                ) : (
+                    <React.Fragment>
+                    {variant === 'submit' && (
+                        <React.Fragment>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/20 to-transparent -translate-x-[200%] animate-[shimmer_2s_infinite]"></div>
+                            <div className="absolute inset-0 rounded-xl border border-blue-400/30 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                        </React.Fragment>
+                    )}
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                        {children}
+                    </span>
+                    </React.Fragment>
+                )}
+                </button>
+            );
+        };
+
+        // Layout Component
+        const Layout = ({ children }) => {
+            return (
+                <div className="h-[100dvh] w-full bg-slate-950 text-white flex flex-col items-center justify-center p-3 sm:p-4 selection:bg-purple-500 selection:text-white overflow-hidden relative touch-none">
+                    {/* Dynamic Background Gradient Blurs */}
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-float-slow opacity-30"></div>
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-float-medium opacity-30" style={{ animationDelay: '1s' }}></div>
+                        <div className="absolute top-[40%] left-[50%] w-[300px] h-[300px] bg-indigo-500/10 rounded-full mix-blend-screen filter blur-[80px] animate-pulse opacity-20 -translate-x-1/2 -translate-y-1/2"></div>
+                    </div>
+                    
+                    <main className="relative z-10 w-full max-w-2xl h-full flex flex-col justify-center">
+                        {children}
+                    </main>
+                </div>
+            );
+        };
+
+        // --- MAIN APPLICATION LOGIC ---
+
+        const App = () => {
+            // App State
+            const [currentScreen, setCurrentScreen] = useState('WELCOME');
+            const [userName, setUserName] = useState('');
+            const [nameError, setNameError] = useState('');
+
+            // Quiz State
+            const [questions, setQuestions] = useState([]);
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+
+            // Result State
+            const [motivationalQuote, setMotivationalQuote] = useState(null);
+            const [isPostingResult, setIsPostingResult] = useState(false);
+            const [postError, setPostError] = useState(null);
+            
+            // Leaderboard State
+            const [leaderboard, setLeaderboard] = useState([]);
+            const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+            const [leaderboardError, setLeaderboardError] = useState(null);
+
+            // --- Logic ---
+
+            const shuffleArray = (array) => {
+                const newArray = [...array];
+                for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                }
+                return newArray;
+            };
+
+            const startQuiz = () => {
+                if (!userName.trim()) {
+                setNameError('Please identify yourself to proceed.');
+                return;
+                }
+                setNameError('');
+                const shuffled = shuffleArray(QUIZ_QUESTIONS);
+                setQuestions(shuffled);
+                setCurrentQuestionIndex(0);
+                setScore(0);
+                setSelectedAnswer(null);
+                setIsAnswerSubmitted(false);
+                
+                setTimeout(() => setCurrentScreen('QUIZ'), 150);
+            };
+
+            const handleAnswerSelect = (optionKey) => {
+                if (isAnswerSubmitted) return;
+                setSelectedAnswer(optionKey);
+            };
+
+            const submitAnswer = () => {
+                if (!selectedAnswer) return;
+                
+                setIsAnswerSubmitted(true);
+                const currentQ = questions[currentQuestionIndex];
+                if (selectedAnswer === currentQ.answer) {
+                setScore((prev) => prev + 1);
+                }
+            };
+
+            const nextQuestion = () => {
+                if (currentQuestionIndex < questions.length - 1) {
+                setCurrentQuestionIndex((prev) => prev + 1);
+                setSelectedAnswer(null);
+                setIsAnswerSubmitted(false);
+                } else {
+                finishQuiz();
+                }
+            };
+
+            const finishQuiz = () => {
+                const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+                setMotivationalQuote(randomQuote);
+                setCurrentScreen('RESULTS');
+            };
+
+            const hasPostedRef = useRef(false);
+
+            useEffect(() => {
+                if (currentScreen === 'RESULTS' && motivationalQuote && userName && !hasPostedRef.current) {
+                hasPostedRef.current = true;
+                const payload = {
+                    name: userName,
+                    score: score,
+                    timestamp: new Date().toISOString(),
+                    quote: motivationalQuote.quote
+                };
+
+                const submitData = async () => {
+                    setIsPostingResult(true);
+                    const success = await postQuizResult(payload);
+                    if (!success) {
+                    setPostError("Note: Network connection issue. Score saved locally.");
+                    }
+                    setIsPostingResult(false);
+                };
+                
+                submitData();
+                }
+                
+                if (currentScreen !== 'RESULTS') {
+                hasPostedRef.current = false;
+                }
+            }, [currentScreen, motivationalQuote, userName, score]);
+
+            const loadLeaderboard = useCallback(async () => {
+                setIsLoadingLeaderboard(true);
+                setLeaderboardError(null);
+                try {
+                const data = await fetchLeaderboard();
+                data.sort((a, b) => {
+                    // Primary: Score Descending
+                    if (b.score !== a.score) return b.score - a.score;
+                    // Secondary: Timestamp Ascending (Earliest first)
+                    return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+                });
+                setLeaderboard(data);
+                } catch (err) {
+                setLeaderboardError("Unable to retrieve global rankings.");
+                } finally {
+                setIsLoadingLeaderboard(false);
+                }
+            }, []);
+
+            useEffect(() => {
+                if (currentScreen === 'LEADERBOARD') {
+                loadLeaderboard();
+                }
+            }, [currentScreen, loadLeaderboard]);
+
+            const goToLeaderboard = () => {
+                setCurrentScreen('LEADERBOARD');
+            };
+
+            const goHome = () => {
+                setUserName('');
+                setCurrentScreen('WELCOME');
+            };
+
+            // --- Renderers ---
+
+            const renderWelcome = () => (
+                <div className="glass-card rounded-3xl p-6 md:p-12 text-center animate-fade-in-up relative overflow-hidden group max-w-xl mx-auto w-full max-h-full flex flex-col justify-center">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-70"></div>
+                    
+                    <div className="relative z-10">
+                        <div className="inline-block px-4 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50 mb-6 md:mb-8 backdrop-blur-md opacity-0 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                            <span className="text-[10px] md:text-sm font-semibold tracking-widest text-blue-400 uppercase">Proficiency Assessment</span>
+                        </div>
+
+                        <h1 className="text-3xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400 mb-3 opacity-0 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                        Python Modules
+                        </h1>
+                        <p className="text-slate-400 text-sm md:text-xl font-light mb-8 max-w-lg mx-auto opacity-0 animate-fade-in-up leading-relaxed" style={{ animationDelay: '300ms' }}>
+                        Evaluate your understanding of modular architecture and package management.
+                        </p>
+                        
+                        <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 mb-8 opacity-0 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                        <div className="flex items-center justify-center space-x-3 md:space-x-4">
+                            <div className="flex -space-x-2 md:-space-x-3">
+                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-yellow-500 border-2 border-slate-900 shadow-lg z-30"></div>
+                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-300 border-2 border-slate-900 shadow-lg z-20"></div>
+                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-amber-700 border-2 border-slate-900 shadow-lg z-10"></div>
+                            </div>
+                            <p className="text-slate-300 text-xs md:text-base">
+                            <span className="font-semibold text-white">Top 3 Rankers</span> rewarded.
+                            </p>
+                        </div>
+                        </div>
+
+                        <div className="space-y-4 md:space-y-6 max-w-sm mx-auto opacity-0 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+                            <div className="relative group">
+                                <div className={`absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl opacity-0 group-focus-within:opacity-100 transition duration-500 blur ${nameError ? 'from-red-600 to-red-600 opacity-100' : ''}`}></div>
+                                <input
+                                type="text"
+                                placeholder="Enter your name correctly"
+                                value={userName}
+                                onChange={(e) => setUserName(e.target.value)}
+                                className="relative w-full bg-slate-950 text-white px-4 md:px-6 py-3 md:py-4 text-sm md:text-lg rounded-xl border border-slate-800 focus:outline-none placeholder-slate-600 transition-all text-center tracking-wide shadow-inner"
+                                onKeyDown={(e) => e.key === 'Enter' && startQuiz()}
+                                />
+                            </div>
+                            {nameError && <p className="text-red-400 text-[10px] md:text-sm animate-pulse font-medium">{nameError}</p>}
+
+                            <Button variant="sleekPrimary" onClick={startQuiz}>
+                                Initialize Quiz
+                            </Button>
+                            
+                            <button 
+                                onClick={goToLeaderboard} 
+                                className="w-full py-2 text-slate-500 text-[10px] md:text-sm hover:text-white transition-colors border-b border-transparent hover:border-slate-700"
+                            >
+                                View Leaderboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderQuiz = () => {
+                if (questions.length === 0) return null;
+                const currentQ = questions[currentQuestionIndex];
+                const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
+                return (
+                <div className="w-full h-full flex flex-col animate-fade-in-up overflow-hidden">
+                    <div className="w-full bg-slate-900/50 rounded-full h-1.5 md:h-2 mb-4 md:mb-8 backdrop-blur-sm shrink-0">
+                        <div 
+                            className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(124,58,237,0.5)]" 
+                            style={{ width: `${progress}%` }}
+                        ></div>
+                    </div>
+
+                    <div className="glass-card rounded-2xl p-4 md:p-10 relative overflow-hidden flex flex-col flex-1 min-h-0">
+                    <div className="mb-4 md:mb-8 shrink-0">
+                        <div className="flex justify-between items-center mb-2 md:mb-3">
+                        <span className="text-blue-400 font-bold text-[10px] md:text-xs tracking-widest uppercase bg-blue-500/10 px-2 md:px-3 py-1 rounded-md">Question {currentQuestionIndex + 1} / {questions.length}</span>
+                        <span className="text-slate-500 text-[10px] md:text-xs uppercase tracking-wider font-medium">Module Check</span>
+                        </div>
+                        <h2 className="text-lg md:text-2xl font-bold text-white leading-tight md:leading-relaxed tracking-tight">
+                        {currentQ.question}
+                        </h2>
+                    </div>
+
+                    <div className="space-y-3 md:space-y-4 mb-4 md:mb-10 flex-1 overflow-y-auto custom-scrollbar pr-1">
+                        {['A', 'B', 'C', 'D'].map((optionKey) => {
+                        const isSelected = selectedAnswer === optionKey;
+                        const isCorrect = currentQ.answer === optionKey;
+                        
+                        let variantStyle = "bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-800/60 hover:border-slate-600";
+                        
+                        if (isAnswerSubmitted) {
+                            if (isCorrect) {
+                            variantStyle = "bg-green-500/10 border-green-500/50 text-green-200 shadow-[0_0_15px_rgba(34,197,94,0.1)]";
+                            } else if (isSelected && !isCorrect) {
+                            variantStyle = "bg-red-500/10 border-red-500/50 text-red-200";
+                            } else {
+                            variantStyle = "opacity-40 grayscale";
+                            }
+                        } else if (isSelected) {
+                            variantStyle = "bg-purple-600/20 border-purple-500 text-white shadow-[0_0_15px_rgba(124,58,237,0.2)]";
+                        }
+
+                        return (
+                            <button
+                            key={optionKey}
+                            onClick={() => handleAnswerSelect(optionKey)}
+                            disabled={isAnswerSubmitted}
+                            className={`w-full text-left py-3 px-3 md:p-5 rounded-xl border transition-all duration-300 flex items-start group ${variantStyle}`}
+                            >
+                            <span className={`inline-flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-lg text-[10px] md:text-xs font-bold mr-3 md:mr-5 shrink-0 transition-colors duration-300 ${
+                                isAnswerSubmitted && isCorrect ? 'bg-green-500 text-white' :
+                                isAnswerSubmitted && isSelected && !isCorrect ? 'bg-red-500 text-white' :
+                                isSelected ? 'bg-purple-500 text-white' : 'bg-slate-700 text-slate-400 group-hover:bg-slate-600'
+                            }`}>
+                                {optionKey}
+                            </span>
+                            <span className="text-sm md:text-lg leading-snug pt-0.5 flex-1 break-words whitespace-normal min-w-0">{currentQ.options[optionKey]}</span>
+                            </button>
+                        );
+                        })}
+                    </div>
+
+                    <div className="shrink-0 mt-auto pt-2">
+                        {isAnswerSubmitted ? (
+                        <div className="animate-fade-in-up">
+                            <div className={`p-3 md:p-5 rounded-xl mb-4 border ${selectedAnswer === currentQ.answer ? 'bg-green-950/30 border-green-900' : 'bg-red-950/30 border-red-900'}`}>
+                            <p className="font-bold mb-1 md:mb-2 flex items-center gap-2 text-sm md:text-base">
+                                {selectedAnswer === currentQ.answer ? (
+                                <span className="text-green-400 flex items-center gap-2">✓ Correct Analysis</span>
+                                ) : (
+                                <span className="text-red-400 flex items-center gap-2">✕ Incorrect</span>
+                                )}
+                            </p>
+                            <p className="text-slate-300 text-xs md:text-sm md:text-base leading-relaxed opacity-90">
+                                {currentQ.explanation}
+                            </p>
+                            </div>
+                            <Button variant="sleekPrimary" fullWidth onClick={nextQuestion}>
+                            {currentQuestionIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
+                            </Button>
+                        </div>
+                        ) : (
+                        <Button 
+                            fullWidth 
+                            variant="submit"
+                            onClick={submitAnswer} 
+                            disabled={!selectedAnswer} 
+                            className={`transition-all duration-500 ${!selectedAnswer ? 'opacity-50 grayscale' : 'opacity-100'}`}
+                        >
+                            Submit Response
+                        </Button>
+                        )}
+                    </div>
+                    </div>
+                </div>
+                );
+            };
+
+            const renderResults = () => (
+                <div className="glass-card rounded-3xl p-6 md:p-14 text-center animate-fade-in-up max-w-lg mx-auto w-full">
+                <div className="relative inline-block mb-6 md:mb-8">
+                    <div className="absolute inset-0 bg-purple-600 blur-2xl opacity-20 animate-pulse"></div>
+                    <div className="relative w-24 h-24 md:w-32 md:h-32 bg-gradient-to-tr from-slate-800 to-slate-900 rounded-full border border-slate-700 flex items-center justify-center shadow-2xl mx-auto">
+                    <span className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-purple-400">{score}<span className="text-slate-600 text-lg md:text-xl font-normal">/10</span></span>
+                    </div>
+                </div>
+                
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 md:mb-3 tracking-tight">Assessment Complete</h2>
+                <p className="text-slate-400 text-xs md:text-base mb-8 md:mb-10">
+                    Performance log for <span className="text-white font-medium">{userName}</span> saved.
+                </p>
+
+                {motivationalQuote && (
+                    <div className="bg-slate-900/50 border border-white/5 p-6 md:p-8 rounded-2xl mb-8 md:mb-10 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-purple-500 group-hover:h-full transition-all duration-700"></div>
+                    <p className="text-lg md:text-2xl text-slate-200 font-serif italic mb-2 md:mb-4 opacity-90 leading-relaxed">"{motivationalQuote.quote}"</p>
+                    <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-widest">- {motivationalQuote.author}</p>
+                    </div>
+                )}
+
+                {postError && (
+                    <div className="bg-yellow-500/10 text-yellow-200 text-xs md:text-sm p-3 md:p-4 rounded-lg mb-6 border border-yellow-500/20">
+                    {postError}
+                    </div>
+                )}
+
+                <div className="space-y-3 md:space-y-4">
+                    <Button variant="sleekPrimary" fullWidth onClick={goToLeaderboard}>
+                    View Leaderboard
+                    </Button>
+                </div>
+                </div>
+            );
+
+            const renderLeaderboard = () => (
+                <div className="glass-card rounded-2xl p-4 md:p-10 w-full flex flex-col h-[90vh] md:h-[80vh] animate-fade-in-up">
+                <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4 shrink-0 gap-4">
+                    <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Leaderboard</h2>
+                    <p className="text-[10px] md:text-sm text-slate-500 uppercase tracking-widest mt-0.5">Top Performers</p>
+                    </div>
+                    <div className="w-auto min-w-[110px] md:min-w-[140px]">
+                    <Button variant="sleekSecondary" fullWidth onClick={goHome}>
+                        Close
+                    </Button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-hidden bg-slate-950/30 rounded-xl border border-white/5 flex flex-col min-h-0">
+                    <div className="grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-5 bg-slate-900/80 border-b border-white/5 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest shrink-0">
+                    <div className="col-span-2 text-center">Rank</div>
+                    <div className="col-span-6">Participant</div>
+                    <div className="col-span-4 text-right">Score</div>
+                    </div>
+
+                    <div className="overflow-y-auto flex-1 p-2 md:p-3 space-y-2 custom-scrollbar">
+                    {isLoadingLeaderboard ? (
+                        <div className="flex items-center justify-center h-full">
+                        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    ) : leaderboardError ? (
+                        <div className="text-center py-10 text-sm text-red-400">{leaderboardError}</div>
+                    ) : leaderboard.length === 0 ? (
+                        <div className="text-center py-20 text-base text-slate-600 font-light">Repository empty. Be the pioneer.</div>
+                    ) : (
+                        leaderboard.map((entry, index) => {
+                        const rank = index + 1;
+                        let rowStyle = "hover:bg-white/5 border border-transparent";
+                        let rankStyle = "text-slate-400";
+                        let scoreStyle = "text-slate-500";
+                        
+                        if (rank === 1) {
+                            rowStyle = "bg-gradient-to-r from-yellow-900/10 to-transparent border border-yellow-500/30 shadow-[inset_0_0_20px_rgba(234,179,8,0.05)]";
+                            rankStyle = "text-yellow-400 font-bold scale-110";
+                            scoreStyle = "text-yellow-400";
+                        } else if (rank === 2) {
+                            rowStyle = "bg-gradient-to-r from-slate-700/10 to-transparent border border-slate-400/30";
+                            rankStyle = "text-slate-300 font-bold scale-110";
+                            scoreStyle = "text-slate-300";
+                        } else if (rank === 3) {
+                            rowStyle = "bg-gradient-to-r from-orange-900/10 to-transparent border border-orange-700/30";
+                            rankStyle = "text-orange-400 font-bold scale-110";
+                            scoreStyle = "text-orange-400";
+                        } else if (rank <= 10) {
+                            rowStyle = "bg-blue-900/5 border border-blue-500/10";
+                            rankStyle = "text-blue-300 font-medium";
+                            scoreStyle = "text-blue-300";
+                        }
+
+                        if (entry.name === userName && currentScreen === 'LEADERBOARD') {
+                            rowStyle = "bg-purple-600/20 border border-purple-500/50 shadow-[0_0_15px_rgba(124,58,237,0.1)]";
+                        }
+
+                        return (
+                            <div 
+                            key={`${entry.name}-${entry.timestamp}-${index}`}
+                            className={`grid grid-cols-12 gap-2 md:gap-4 p-3 md:p-4 rounded-xl items-center transition-all duration-300 ${rowStyle}`}
+                            >
+                            <div className={`col-span-2 text-center font-mono text-xs md:text-base ${rankStyle}`}>
+                                {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank).padStart(2, '0')}
+                            </div>
+                            <div className="col-span-6 font-medium text-slate-200 truncate pr-2 text-xs md:text-base">
+                                {entry.name}
+                            </div>
+                            <div className="col-span-4 text-right font-bold text-xs md:text-base">
+                                <span className={scoreStyle}>{entry.score}</span>
+                                <span className="text-slate-700 mx-1 text-[10px]">/</span>
+                                <span className="text-slate-700 text-[10px]">10</span>
+                            </div>
+                            </div>
+                        );
+                        })
+                    )}
+                    </div>
+                </div>
+                </div>
+            );
+
+            return (
+                <Layout>
+                {currentScreen === 'WELCOME' && renderWelcome()}
+                {currentScreen === 'QUIZ' && renderQuiz()}
+                {currentScreen === 'RESULTS' && renderResults()}
+                {currentScreen === 'LEADERBOARD' && renderLeaderboard()}
+                </Layout>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>
